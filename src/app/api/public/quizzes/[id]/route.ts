@@ -49,7 +49,7 @@ export const GET = withErrorHandler<unknown, QuizParams>(async (_request: Reques
     id: quiz.id,
     title: quiz.title,
     description: quiz.description,
-    questions: quiz.questions.map((q) => ({
+    questions: quiz.questions.map((q: any) => ({
       id: q.id,
       text: q.text,
       type: q.type,
