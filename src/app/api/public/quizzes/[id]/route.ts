@@ -3,7 +3,6 @@ import {
   successResponse,
   withErrorHandler,
   ApiError,
-  RouteContext,
 } from "@/lib/api-utils";
 
 type QuizParams = { id: string };

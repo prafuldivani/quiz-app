@@ -3,20 +3,20 @@ import { CreateQuizSchema } from "@/lib/validations/quiz";
 import {
   successResponse,
   withErrorHandler,
-  RouteContext,
 } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/session";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 
 /**
- * GET /api/quizzes - List all quizzes
+ * GET /api/quizzes - List quizzes owned by the current user
  * Protected: Requires authentication
  */
 export const GET = withErrorHandler(async () => {
-  // Require authentication for listing quizzes
-  await requireAuth();
+  const session = await requireAuth();
 
+  // Only return quizzes created by the logged-in user
   const quizzes = await prisma.quiz.findMany({
+    where: { createdById: session.user.id },
     include: {
       _count: {
         select: { questions: true, attempts: true },
@@ -33,17 +33,14 @@ export const GET = withErrorHandler(async () => {
  * Protected: Requires authentication
  * Rate limited: 30 requests per minute
  */
-export const POST = withErrorHandler(async (request: Request, _context?: RouteContext) => {
-  // Rate limit check
+export const POST = withErrorHandler(async (request: Request) => {
   const rateLimitResponse = rateLimit(request, RATE_LIMITS.admin);
   if (rateLimitResponse) return rateLimitResponse;
 
-  // Require authentication
-  await requireAuth();
+  const session = await requireAuth();
 
   const body = await request.json();
 
-  // Validate with Zod (throws ZodError if invalid)
   const validationResult = CreateQuizSchema.safeParse(body);
   if (!validationResult.success) {
     throw validationResult.error;
@@ -51,12 +48,13 @@ export const POST = withErrorHandler(async (request: Request, _context?: RouteCo
 
   const { title, description, isPublished, questions } = validationResult.data;
 
-  // Create quiz with questions and options in a transaction
+  // Create quiz with createdById set to current user
   const quiz = await prisma.quiz.create({
     data: {
       title,
       description,
       isPublished: isPublished ?? false,
+      createdById: session.user.id,
       questions: {
         create: questions.map((q, index) => ({
           text: q.text,

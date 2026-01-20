@@ -3,7 +3,6 @@ import {
   successResponse,
   withErrorHandler,
   ApiError,
-  RouteContext,
 } from "@/lib/api-utils";
 
 type ResultParams = { id: string; attemptId: string };

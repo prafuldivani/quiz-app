@@ -5,7 +5,6 @@ import {
   successResponse,
   withErrorHandler,
   ApiError,
-  RouteContext,
 } from "@/lib/api-utils";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
 

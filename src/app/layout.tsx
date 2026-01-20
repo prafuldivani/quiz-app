@@ -1,25 +1,22 @@
 import type { Metadata } from "next";
 import { Inter, Geist_Mono } from "next/font/google";
-import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
+import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/theme-provider";
 
-// Inter - clean, modern font for the quiz app
 const inter = Inter({
   variable: "--font-inter",
   subsets: ["latin"],
-  display: "swap",
 });
 
-// Geist Mono for code/monospace content
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-  title: "Quiz App - Create & Share Quizzes",
-  description: "Create engaging quizzes and share them with anyone. Track results and scores with shareable links.",
-  keywords: ["quiz", "assessment", "education", "learning"],
+  title: "QuizApp - Create & Share Quizzes",
+  description: "Create beautiful quizzes with multiple question types, share them with anyone, and track results.",
 };
 
 export default function RootLayout({
@@ -28,12 +25,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body
-        className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}
-      >
-        {children}
-        <Toaster position="top-right" richColors />
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
+        <ThemeProvider>
+          {children}
+          <Toaster position="top-center" richColors />
+        </ThemeProvider>
       </body>
     </html>
   );

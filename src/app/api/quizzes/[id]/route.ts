@@ -4,7 +4,6 @@ import {
   successResponse,
   withErrorHandler,
   ApiError,
-  RouteContext,
 } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/session";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
@@ -13,11 +12,10 @@ type QuizParams = { id: string };
 
 /**
  * GET /api/quizzes/[id] - Get a single quiz by ID
- * Protected: Requires authentication
+ * Protected: Requires authentication, must own the quiz
  */
 export const GET = withErrorHandler<unknown, QuizParams>(async (_request: Request, context) => {
-  await requireAuth();
-
+  const session = await requireAuth();
   const { id } = await context!.params;
 
   const quiz = await prisma.quiz.findUnique({
@@ -34,19 +32,23 @@ export const GET = withErrorHandler<unknown, QuizParams>(async (_request: Reques
     throw ApiError.notFound("Quiz not found");
   }
 
+  // Verify ownership
+  if (quiz.createdById !== session.user.id) {
+    throw ApiError.forbidden("You don't have permission to access this quiz");
+  }
+
   return successResponse(quiz);
 });
 
 /**
  * PUT /api/quizzes/[id] - Update a quiz
- * Protected: Requires authentication
+ * Protected: Requires authentication, must own the quiz
  */
 export const PUT = withErrorHandler<unknown, QuizParams>(async (request: Request, context) => {
   const rateLimitResponse = rateLimit(request, RATE_LIMITS.admin);
   if (rateLimitResponse) return rateLimitResponse;
 
-  await requireAuth();
-
+  const session = await requireAuth();
   const { id } = await context!.params;
   const body = await request.json();
 
@@ -54,6 +56,11 @@ export const PUT = withErrorHandler<unknown, QuizParams>(async (request: Request
   const existingQuiz = await prisma.quiz.findUnique({ where: { id } });
   if (!existingQuiz) {
     throw ApiError.notFound("Quiz not found");
+  }
+
+  // Verify ownership
+  if (existingQuiz.createdById !== session.user.id) {
+    throw ApiError.forbidden("You don't have permission to edit this quiz");
   }
 
   // Validate request body
@@ -66,7 +73,6 @@ export const PUT = withErrorHandler<unknown, QuizParams>(async (request: Request
 
   // Update quiz in a transaction
   const quiz = await prisma.$transaction(async (tx) => {
-    // If questions are provided, delete existing and recreate
     if (questions) {
       await tx.question.deleteMany({ where: { quizId: id } });
     }
@@ -110,20 +116,24 @@ export const PUT = withErrorHandler<unknown, QuizParams>(async (request: Request
 
 /**
  * DELETE /api/quizzes/[id] - Delete a quiz
- * Protected: Requires authentication
+ * Protected: Requires authentication, must own the quiz
  */
 export const DELETE = withErrorHandler<unknown, QuizParams>(async (request: Request, context) => {
   const rateLimitResponse = rateLimit(request, RATE_LIMITS.admin);
   if (rateLimitResponse) return rateLimitResponse;
 
-  await requireAuth();
-
+  const session = await requireAuth();
   const { id } = await context!.params;
 
   // Check if quiz exists
   const existingQuiz = await prisma.quiz.findUnique({ where: { id } });
   if (!existingQuiz) {
     throw ApiError.notFound("Quiz not found");
+  }
+
+  // Verify ownership
+  if (existingQuiz.createdById !== session.user.id) {
+    throw ApiError.forbidden("You don't have permission to delete this quiz");
   }
 
   await prisma.quiz.delete({ where: { id } });
