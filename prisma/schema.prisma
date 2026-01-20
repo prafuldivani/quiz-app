@@ -8,3 +8,121 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ==================== AUTHENTICATION MODELS ====================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ipAddress String?
+  userAgent String?
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accountId             String
+  providerId            String
+  accessToken           String?
+  refreshToken          String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+// ==================== QUIZ MODELS ====================
+
+// Quiz model - represents a quiz with title and description
+model Quiz {
+  id          String     @id @default(cuid())
+  title       String
+  description String?
+  isPublished Boolean    @default(false)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  questions   Question[]
+  attempts    Attempt[]
+}
+
+// Question types supported by the system
+enum QuestionType {
+  MCQ
+  TRUE_FALSE
+  TEXT
+}
+
+// Question model - belongs to a quiz
+model Question {
+  id            String       @id @default(cuid())
+  quizId        String
+  quiz          Quiz         @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  text          String
+  type          QuestionType
+  order         Int
+  options       Option[]
+  correctAnswer String?      // For TEXT type questions
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([quizId])
+}
+
+// Option model - for MCQ and TRUE_FALSE questions
+model Option {
+  id         String   @id @default(cuid())
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean  @default(false)
+
+  @@index([questionId])
+}
+
+// Attempt model - stores quiz submission results
+model Attempt {
+  id              String   @id @default(cuid())
+  quizId          String
+  quiz            Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  participantName String   // Name of the person who took the quiz
+  answers         Json     // Store submitted answers as JSON
+  score           Int
+  totalPoints     Int
+  createdAt       DateTime @default(now())
+
+  @@index([quizId])
+}

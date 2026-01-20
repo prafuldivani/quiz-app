@@ -61,4 +61,21 @@ Next.js App (Frontend + API)
 | GET | `/api/quizzes/[id]` | Get quiz details |
 | PUT | `/api/quizzes/[id]` | Update quiz |
 | DELETE | `/api/quizzes/[id]` | Delete quiz |
-| POST | `/api/quizzes/[id]/submit` | Submit answers, return score |
+| POST | `/api/quizzes/[id]/submit` | Submit answers (with participant name), return score + attemptId |
+| GET | `/api/quizzes/[id]/result/[attemptId]` | Get shareable result |
+
+---
+
+## Scope Changes
+
+### Change #1: Participant Name + Shareable Results
+**Added**: Ask for participant name before quiz, return unique shareable result link.
+- `Attempt` model now includes `participantName`
+- Submit returns `attemptId` for `/quiz/[id]/result/[attemptId]` URL
+- Results page shows participant name, score, and answers
+
+---
+
+## Reflection
+*(To be written after completion)*
+
