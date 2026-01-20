@@ -9,9 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 /**
- * Registration page - Production-grade design
+ * Registration page - Production-grade design with UX improvements
  */
 export default function RegisterPage() {
   const router = useRouter();
@@ -19,6 +20,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -61,7 +64,7 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
         <div className="w-full max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link href="/" className="text-xl font-bold tracking-tight">
             QuizApp
@@ -70,7 +73,7 @@ export default function RegisterPage() {
         </div>
       </header>
 
-      {/* Main Content - CENTERED */}
+      {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-6 py-12">
         <Card className="w-full max-w-[400px] animate-fade-in shadow-sm">
           <CardHeader className="space-y-1 pb-6">
@@ -98,6 +101,7 @@ export default function RegisterPage() {
                   required
                   placeholder="John Doe"
                   className="h-11"
+                  disabled={loading}
                 />
               </div>
 
@@ -111,20 +115,32 @@ export default function RegisterPage() {
                   required
                   placeholder="you@example.com"
                   className="h-11"
+                  disabled={loading}
                 />
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="h-11"
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="h-11 pr-10"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
                 <p className="text-xs text-muted-foreground">
                   Must be at least 8 characters
                 </p>
@@ -132,19 +148,37 @@ export default function RegisterPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  placeholder="••••••••"
-                  className="h-11"
-                />
+                <div className="relative">
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    placeholder="••••••••"
+                    className="h-11 pr-10"
+                    disabled={loading}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
               </div>
 
               <Button type="submit" disabled={loading} className="w-full h-11">
-                {loading ? "Creating account..." : "Create account"}
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create account"
+                )}
               </Button>
             </form>
 

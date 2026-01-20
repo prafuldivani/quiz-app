@@ -4,6 +4,7 @@ import {
   withErrorHandler,
   ApiError,
 } from "@/lib/api-utils";
+import { calculateQuizScore, QUIZ_WITH_QUESTIONS_INCLUDE } from "@/lib/quiz-utils";
 
 type ResultParams = { id: string; attemptId: string };
 
@@ -19,12 +20,7 @@ export const GET = withErrorHandler<unknown, ResultParams>(async (_request: Requ
     where: { id: attemptId },
     include: {
       quiz: {
-        include: {
-          questions: {
-            include: { options: true },
-            orderBy: { order: "asc" },
-          },
-        },
+        include: QUIZ_WITH_QUESTIONS_INCLUDE,
       },
     },
   });
@@ -33,45 +29,9 @@ export const GET = withErrorHandler<unknown, ResultParams>(async (_request: Requ
     throw ApiError.notFound("Result not found");
   }
 
-  // Build the result response
-  const answers = attempt.answers as Record<string, string>;
-  const resultAnswers = attempt.quiz.questions.map((question) => {
-    const userAnswer = answers[question.id] || "";
-    let isCorrect = false;
-    let correctAnswer: string | null = null;
-    let correctAnswerText: string | null = null;
-    let userAnswerText: string | null = null;
-
-    if (question.type === "MCQ" || question.type === "TRUE_FALSE") {
-      const correctOption = question.options.find((opt) => opt.isCorrect);
-      const userOption = question.options.find((opt) => opt.id === userAnswer);
-
-      correctAnswer = correctOption?.id || null;
-      correctAnswerText = correctOption?.text || null;
-      userAnswerText = userOption?.text || null;
-      isCorrect = userAnswer === correctAnswer;
-    } else if (question.type === "TEXT") {
-      correctAnswer = question.correctAnswer;
-      correctAnswerText = question.correctAnswer;
-      userAnswerText = userAnswer;
-    }
-
-    return {
-      questionId: question.id,
-      questionText: question.text,
-      type: question.type,
-      userAnswer,
-      userAnswerText,
-      correctAnswer,
-      correctAnswerText,
-      isCorrect,
-      options: question.options.map((opt) => ({
-        id: opt.id,
-        text: opt.text,
-        isCorrect: opt.isCorrect,
-      })),
-    };
-  });
+  // Calculate score using shared utility
+  const userAnswers = attempt.answers as Record<string, string>;
+  const scoreResult = calculateQuizScore(attempt.quiz.questions, userAnswers);
 
   return successResponse({
     attemptId: attempt.id,
@@ -80,11 +40,8 @@ export const GET = withErrorHandler<unknown, ResultParams>(async (_request: Requ
     participantName: attempt.participantName,
     score: attempt.score,
     totalPoints: attempt.totalPoints,
-    percentage:
-      attempt.totalPoints > 0
-        ? Math.round((attempt.score / attempt.totalPoints) * 100)
-        : 0,
+    percentage: scoreResult.percentage,
     completedAt: attempt.createdAt,
-    answers: resultAnswers,
+    answers: scoreResult.answers,
   });
 });

@@ -1,47 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-interface Quiz {
-  id: string;
-  title: string;
-  description: string | null;
-  isPublished: boolean;
-  createdAt: string;
-  _count: {
-    questions: number;
-    attempts: number;
-  };
-}
+import { Copy } from "lucide-react";
+import { toast } from "sonner";
+import { useQuizzes } from "@/hooks/use-quiz";
 
 /**
- * Quiz list page
+ * Quiz list page - uses React Query for data fetching
  */
 export default function QuizzesPage() {
-  const [quizzes, setQuizzes] = useState<Quiz[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data: quizzes, isLoading, error } = useQuizzes();
 
-  useEffect(() => {
-    async function fetchQuizzes() {
-      try {
-        const response = await fetch("/api/quizzes");
-        const data = await response.json();
-        if (data.success) {
-          setQuizzes(data.data);
-        }
-      } catch (error) {
-        console.error("Failed to fetch quizzes:", error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchQuizzes();
-  }, []);
+  const copyLink = (quizId: string) => {
+    navigator.clipboard.writeText(`${window.location.origin}/quiz/${quizId}`);
+    toast.success("Link copied to clipboard");
+  };
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -59,11 +35,19 @@ export default function QuizzesPage() {
       </div>
 
       {/* Content */}
-      {loading ? (
+      {isLoading ? (
         <div className="py-16 text-center text-muted-foreground">
           Loading quizzes...
         </div>
-      ) : quizzes.length === 0 ? (
+      ) : error ? (
+        <Card>
+          <CardContent className="py-16 text-center">
+            <div className="text-4xl mb-4">⚠️</div>
+            <h3 className="text-lg font-medium mb-2">Failed to load quizzes</h3>
+            <p className="text-muted-foreground">Please try again later</p>
+          </CardContent>
+        </Card>
+      ) : !quizzes || quizzes.length === 0 ? (
         <Card>
           <CardContent className="py-16 text-center">
             <div className="text-4xl mb-4">📝</div>
@@ -115,6 +99,17 @@ export default function QuizzesPage() {
                       Results
                     </Button>
                   </Link>
+                  {quiz.isPublished && (
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="shrink-0 h-8 w-8"
+                      onClick={() => copyLink(quiz.id)}
+                      title="Copy Link"
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

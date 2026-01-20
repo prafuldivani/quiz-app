@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useState, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -11,66 +11,26 @@ import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { toast } from "sonner";
-
-interface Option {
-  id: string;
-  text: string;
-}
-
-interface Question {
-  id: string;
-  text: string;
-  type: "MCQ" | "TRUE_FALSE" | "TEXT";
-  options: Option[];
-}
-
-interface Quiz {
-  id: string;
-  title: string;
-  description: string | null;
-  questions: Question[];
-}
+import { usePublicQuiz, useSubmitQuiz } from "@/hooks/use-quiz";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 /**
- * Public quiz taking page
+ * Public quiz taking page - uses React Query
  */
 export default function TakeQuizPage({ params }: PageProps) {
   const { id } = use(params);
   const router = useRouter();
 
-  const [quiz, setQuiz] = useState<Quiz | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const { data: quiz, isLoading, error } = usePublicQuiz(id);
+  const submitQuiz = useSubmitQuiz(id);
 
   const [participantName, setParticipantName] = useState("");
   const [started, setStarted] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
-
-  useEffect(() => {
-    async function loadQuiz() {
-      try {
-        const response = await fetch(`/api/public/quizzes/${id}`);
-        const data = await response.json();
-
-        if (data.success) {
-          setQuiz(data.data);
-        } else {
-          setError("This quiz is not available");
-        }
-      } catch {
-        setError("Failed to load quiz");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadQuiz();
-  }, [id]);
 
   const handleStart = () => {
     if (!participantName.trim()) {
@@ -84,33 +44,22 @@ export default function TakeQuizPage({ params }: PageProps) {
     setAnswers({ ...answers, [questionId]: answer });
   };
 
-  const handleSubmit = async () => {
-    if (!quiz) return;
-    setSubmitting(true);
-
-    try {
-      const response = await fetch(`/api/quizzes/${id}/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ participantName, answers }),
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        router.push(`/quiz/${id}/result/${data.data.attemptId}`);
-      } else {
-        toast.error(data.error || "Failed to submit quiz");
+  const handleSubmit = () => {
+    submitQuiz.mutate(
+      { participantName, answers },
+      {
+        onSuccess: (data) => {
+          router.push(`/quiz/${id}/result/${data.attemptId}`);
+        },
+        onError: (err) => {
+          toast.error(err.message || "Failed to submit quiz");
+        },
       }
-    } catch {
-      toast.error("An error occurred");
-    } finally {
-      setSubmitting(false);
-    }
+    );
   };
 
   // Loading state
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground">Loading quiz...</div>
@@ -133,7 +82,7 @@ export default function TakeQuizPage({ params }: PageProps) {
             <CardContent className="py-16">
               <div className="text-4xl mb-4">🔒</div>
               <h2 className="text-lg font-medium mb-2">Quiz Not Available</h2>
-              <p className="text-muted-foreground mb-6">{error || "This quiz does not exist or is not published"}</p>
+              <p className="text-muted-foreground mb-6">This quiz does not exist or is not published</p>
               <Link href="/">
                 <Button>Go Home</Button>
               </Link>
@@ -280,8 +229,8 @@ export default function TakeQuizPage({ params }: PageProps) {
               </Button>
 
               {isLastQuestion ? (
-                <Button onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? "Submitting..." : "Submit Quiz"}
+                <Button onClick={handleSubmit} disabled={submitQuiz.isPending}>
+                  {submitQuiz.isPending ? "Submitting..." : "Submit Quiz"}
                 </Button>
               ) : (
                 <Button

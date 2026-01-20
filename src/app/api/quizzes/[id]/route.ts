@@ -3,10 +3,15 @@ import { UpdateQuizSchema } from "@/lib/validations/quiz";
 import {
   successResponse,
   withErrorHandler,
-  ApiError,
 } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/session";
 import { rateLimit, RATE_LIMITS } from "@/lib/rate-limit";
+import {
+  getOwnedQuizWithQuestions,
+  requireQuizOwnership,
+  buildQuestionsCreateData,
+  QUIZ_WITH_QUESTIONS_INCLUDE,
+} from "@/lib/quiz-utils";
 
 type QuizParams = { id: string };
 
@@ -18,24 +23,7 @@ export const GET = withErrorHandler<unknown, QuizParams>(async (_request: Reques
   const session = await requireAuth();
   const { id } = await context!.params;
 
-  const quiz = await prisma.quiz.findUnique({
-    where: { id },
-    include: {
-      questions: {
-        include: { options: true },
-        orderBy: { order: "asc" },
-      },
-    },
-  });
-
-  if (!quiz) {
-    throw ApiError.notFound("Quiz not found");
-  }
-
-  // Verify ownership
-  if (quiz.createdById !== session.user.id) {
-    throw ApiError.forbidden("You don't have permission to access this quiz");
-  }
+  const quiz = await getOwnedQuizWithQuestions(id, session.user.id);
 
   return successResponse(quiz);
 });
@@ -52,16 +40,8 @@ export const PUT = withErrorHandler<unknown, QuizParams>(async (request: Request
   const { id } = await context!.params;
   const body = await request.json();
 
-  // Check if quiz exists
-  const existingQuiz = await prisma.quiz.findUnique({ where: { id } });
-  if (!existingQuiz) {
-    throw ApiError.notFound("Quiz not found");
-  }
-
-  // Verify ownership
-  if (existingQuiz.createdById !== session.user.id) {
-    throw ApiError.forbidden("You don't have permission to edit this quiz");
-  }
+  // Verify ownership first
+  await requireQuizOwnership(id, session.user.id);
 
   // Validate request body
   const validationResult = UpdateQuizSchema.safeParse(body);
@@ -85,29 +65,11 @@ export const PUT = withErrorHandler<unknown, QuizParams>(async (request: Request
         ...(isPublished !== undefined && { isPublished }),
         ...(questions && {
           questions: {
-            create: questions.map((q, index) => ({
-              text: q.text,
-              type: q.type,
-              order: q.order ?? index,
-              correctAnswer: q.correctAnswer,
-              options: q.options
-                ? {
-                  create: q.options.map((opt) => ({
-                    text: opt.text,
-                    isCorrect: opt.isCorrect,
-                  })),
-                }
-                : undefined,
-            })),
+            create: buildQuestionsCreateData(questions),
           },
         }),
       },
-      include: {
-        questions: {
-          include: { options: true },
-          orderBy: { order: "asc" },
-        },
-      },
+      include: QUIZ_WITH_QUESTIONS_INCLUDE,
     });
   });
 
@@ -125,16 +87,8 @@ export const DELETE = withErrorHandler<unknown, QuizParams>(async (request: Requ
   const session = await requireAuth();
   const { id } = await context!.params;
 
-  // Check if quiz exists
-  const existingQuiz = await prisma.quiz.findUnique({ where: { id } });
-  if (!existingQuiz) {
-    throw ApiError.notFound("Quiz not found");
-  }
-
   // Verify ownership
-  if (existingQuiz.createdById !== session.user.id) {
-    throw ApiError.forbidden("You don't have permission to delete this quiz");
-  }
+  await requireQuizOwnership(id, session.user.id);
 
   await prisma.quiz.delete({ where: { id } });
 

@@ -1,58 +1,22 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { use } from "react";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-interface Attempt {
-  id: string;
-  participantName: string;
-  score: number;
-  totalPoints: number;
-  percentage: number;
-  createdAt: string;
-}
-
-interface AttemptsData {
-  quizId: string;
-  quizTitle: string;
-  attempts: Attempt[];
-}
+import { useQuizAttempts } from "@/hooks/use-quiz";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
 /**
- * Quiz attempts/results page for admin
+ * Quiz attempts/results page for admin - uses React Query
  */
 export default function QuizAttemptsPage({ params }: PageProps) {
   const { id } = use(params);
-  const [data, setData] = useState<AttemptsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    async function loadAttempts() {
-      try {
-        const response = await fetch(`/api/quizzes/${id}/attempts`);
-        const result = await response.json();
-
-        if (result.success) {
-          setData(result.data);
-        } else {
-          setError(result.error || "Failed to load attempts");
-        }
-      } catch {
-        setError("Failed to load attempts");
-      } finally {
-        setLoading(false);
-      }
-    }
-    loadAttempts();
-  }, [id]);
+  const { data, isLoading, error } = useQuizAttempts(id);
 
   const getScoreColor = (percentage: number) => {
     if (percentage >= 80) return "text-green-600 dark:text-green-400";
@@ -70,7 +34,7 @@ export default function QuizAttemptsPage({ params }: PageProps) {
     });
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-16">
         <div className="text-muted-foreground">Loading attempts...</div>
@@ -88,7 +52,7 @@ export default function QuizAttemptsPage({ params }: PageProps) {
           <CardContent className="py-16 text-center">
             <div className="text-4xl mb-4">⚠️</div>
             <h3 className="text-lg font-medium mb-2">Error</h3>
-            <p className="text-muted-foreground">{error}</p>
+            <p className="text-muted-foreground">{error instanceof Error ? error.message : "Failed to load attempts"}</p>
           </CardContent>
         </Card>
       </div>

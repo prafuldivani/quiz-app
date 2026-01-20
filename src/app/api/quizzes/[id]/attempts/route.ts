@@ -2,9 +2,9 @@ import prisma from "@/lib/prisma";
 import {
   successResponse,
   withErrorHandler,
-  ApiError,
 } from "@/lib/api-utils";
 import { requireAuth } from "@/lib/session";
+import { requireQuizOwnership, calculatePercentage } from "@/lib/quiz-utils";
 
 type AttemptsParams = { id: string };
 
@@ -16,19 +16,8 @@ export const GET = withErrorHandler<unknown, AttemptsParams>(async (_request: Re
   const session = await requireAuth();
   const { id } = await context!.params;
 
-  // Verify quiz exists and user owns it
-  const quiz = await prisma.quiz.findUnique({
-    where: { id },
-    select: { id: true, createdById: true, title: true },
-  });
-
-  if (!quiz) {
-    throw ApiError.notFound("Quiz not found");
-  }
-
-  if (quiz.createdById !== session.user.id) {
-    throw ApiError.forbidden("You don't have permission to view these attempts");
-  }
+  // Verify ownership
+  const quiz = await requireQuizOwnership(id, session.user.id);
 
   // Get all attempts for this quiz
   const attempts = await prisma.attempt.findMany({
@@ -48,7 +37,7 @@ export const GET = withErrorHandler<unknown, AttemptsParams>(async (_request: Re
     quizTitle: quiz.title,
     attempts: attempts.map((a) => ({
       ...a,
-      percentage: a.totalPoints > 0 ? Math.round((a.score / a.totalPoints) * 100) : 0,
+      percentage: calculatePercentage(a.score, a.totalPoints),
     })),
   });
 });
