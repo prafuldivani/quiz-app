@@ -76,6 +76,33 @@ Next.js App (Frontend + API)
 
 ---
 
+## Future Roadmap
+
+### 1. Functional Enhancements (Priority)
+- **Rich Text & Code Questions**: Markdown editor with syntax highlighting for technical interviews.
+- **Analytics Dashboard**: Visual charts for pass rates, average scores, and question difficulty heatmaps.
+- **Time Limits**: Strict countdown timers with auto-submission.
+- **Access Codes & Privacy**: Password-protected quizzes and "Invite Only" mode.
+- **Question Bank**: Reusable questions library to mix-and-match into new quizzes.
+- **Gamification**: Public leaderboards and "Certificate of Completion" generation.
+- **Data Export**: Download attempts and results as CSV/PDF.
+- **Role-Based Access**: Separate Admin, Editor, and Viewer roles.
+- **Shuffle Questions**: Shuffle questions and options for each participant.
+- **Shuffle Options**: Shuffle options for each participant.
+
+### 2. DevOps & Quality (Reliability)
+- **E2E Testing**: Playwright suite for critical user flows.
+- **Unit Testing**: Vitest for utility logic and components.
+- **CI/CD**: GitHub Actions for automated testing and linting.
+- **Error Monitoring**: Sentry integration.
+
+### 3. Polish & Performance
+- **OG Images**: Dynamic social sharing cards.
+- **Skeleton Loading**: Improved loading states.
+- **Optimistic UI**: Instant feedback on actions.
+
+---
+
 ## Reflection
 *(To be written after completion)*
 
